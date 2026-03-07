@@ -9,7 +9,7 @@
   * @author Sergio Rosales Calzadilla
   * @author Adriel Reyes Suárez
   * @date 26/02/2026
-  * Archivo instruccion.h: 
+  * Archivo quick_sort.h: 
   */
 
 #ifndef QUICK_SORT_H
