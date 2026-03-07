@@ -25,6 +25,7 @@
 #include <iostream>
 #include <memory>
 #include "solucion.h" 
+#include "instancia_planificacion.h"
 
 /**
  * @brief Representa una solución (o subsolución) del problema de planificación.
@@ -36,50 +37,43 @@ class SolucionPlanificacion : public Solucion {
   /**
    * @brief Constructor. Inicializa las estructuras vacías para la ventana de tiempo.
    */
-  SolucionPlanificacion(int dia_inicio, int num_dias, int num_empleados, int num_turnos);
-  /**
-   * @brief Asigna un empleado a un turno y actualiza las métricas internas.
-   * @param dia_relativo Día dentro de la subsolución (0 a num_dias_ - 1).
-   * @param turno El turno a cubrir.
-   * @param empleado ID del empleado asignado.
-   * @param satisfaccion Valor A[e][d][t] para sumarlo a la caché.
-   */
+  SolucionPlanificacion(int dia_inicio, int num_dias, int num_empleados, int num_turnos, int dias_totales_, 
+      std::shared_ptr<std::vector<int>> dias_libres,
+      std::shared_ptr<std::vector<std::vector<std::vector<int>>>> satisfaccion,
+      std::shared_ptr<std::vector<std::vector<int>>> empleados_requeridos);
+  
+  // Asigna un empleado a un turno específico 
   void AsignarEmpleado(int dia_relativo, int turno, int empleado, int satisfaccion);
-  /**
-   * @brief Registra que un turno ha alcanzado el mínimo B[d][t].
-   */
+  
+  void DesasignarEmpleado(int dia_relativo, int turno, int empleado, int satisfaccion, int requeridos);
+  // Aumenta el valor de los turnos cubiertos
   void RegistrarTurnoCubierto();
-  /**
-   * @brief Devuelve la lista de empleados asignados a un turno concreto.
-   */
+  // Devuelve la lista de empleados que trabajan en el día y turno especificados
   const std::vector<int>& GetAsignaciones(int dia_relativo, int turno) const;
-  /**
-   * @brief Devuelve cuántos días ha trabajado un empleado en esta subsolución.
-   * Esencial para que el Combine valide las restricciones de descanso.
-   */
+  
+  
+  // Cuántos días el empleado ha trabajado
   int GetDiasTrabajados(int empleado) const;
-  /**
-   * @brief Calcula y devuelve la función objetivo f(x)
-   * Fórmula: SUMA(satisfaccion) + SUMA(turnos_cubiertos) * 100
-   */
+  // Calcula la función objetivo
   int GetCalidad() const;
-  // --- Getters del bloque temporal ---
+  
   int GetDiaInicio() const { return dia_inicio_; }
+  
   int GetNumDias() const { return num_dias_; }
-  /**
-   * @brief Muestra la solución por pantalla de forma legible
-   */
-  void Print(std::ostream& os) const override;
+  int GetNumTurnos() const { return num_turnos_; }
 
-  /**
-   * @brief Fusiona otra subsolución cronológicamente posterior a esta.
-   */
+  int GetDiasTotales() const { return dias_totales_; }
+  int GetNumEmpleados() const { return dias_trabajados_.size(); }
+  int GetDiasLibresExigidos(int empleado) const { return (*dias_libres_)[empleado]; }
+  int GetSatisfaccion(int empleado, int dia_absoluto, int turno) const { return (*satisfaccion_)[empleado][dia_absoluto][turno]; }
+  int GetRequeridos(int dia_absoluto, int turno) const { return (*empleados_requeridos_)[dia_absoluto][turno]; }
+  void Print(std::ostream& os) const override;
   void Concatenar(const SolucionPlanificacion& otra);
 
  private:
   int dia_inicio_; ///< Día absoluto en el que comienza esta subsolución.
   int num_dias_;   ///< Cantidad de días que abarca.
-
+  int num_turnos_;  ///< Número de turnos por día
   // Matriz 3D: [dia_relativo][turno] -> Lista de IDs de empleados asignados
   // Se usa un vector interno porque un turno puede requerir múltiples empleados.
   std::vector<std::vector<std::vector<int>>> asignaciones_;
@@ -90,6 +84,11 @@ class SolucionPlanificacion : public Solucion {
   // Caché para la función objetivo f(x)
   int suma_satisfaccion_;
   int turnos_cubiertos_;
+
+  int dias_totales_; 
+  std::shared_ptr<std::vector<int>> dias_libres_;
+  std::shared_ptr<std::vector<std::vector<std::vector<int>>>> satisfaccion_;
+  std::shared_ptr<std::vector<std::vector<int>>> empleados_requeridos_;
 };
 
 #endif

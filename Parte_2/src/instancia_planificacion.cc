@@ -15,7 +15,7 @@ InstanciaPlanificacion::InstanciaPlanificacion(const std::string& ruta_fichero)
     empleados_(std::make_shared<std::vector<std::string>>()),
     dias_libres_requeridos_(std::make_shared<std::vector<int>>()),
     satisfaccion_(std::make_shared<std::vector<std::vector<std::vector<int>>>>()),
-    turnos_requeridos_(std::make_shared<std::vector<std::vector<int>>>()),
+    empleados_requeridos_(std::make_shared<std::vector<std::vector<int>>>()),
     dia_inicio_(0) {
   
   std::ifstream f(ruta_fichero);
@@ -43,7 +43,7 @@ InstanciaPlanificacion::InstanciaPlanificacion(const std::string& ruta_fichero)
 
   // 2. Redimensionar las matrices tridimensionales y bidimensionales
   satisfaccion_->resize(GetNumEmpleados(), std::vector<std::vector<int>>(num_dias_, std::vector<int>(GetNumTurnos(), 0)));
-  turnos_requeridos_->resize(num_dias_, std::vector<int>(GetNumTurnos(), 0));
+  empleados_requeridos_->resize(num_dias_, std::vector<int>(GetNumTurnos(), 0));
 
   // 3. Poblar las matrices desreferenciando los punteros inteligentes
   for (const auto& s : data["satisfaction"]) {
@@ -51,7 +51,7 @@ InstanciaPlanificacion::InstanciaPlanificacion(const std::string& ruta_fichero)
   }
 
   for (const auto& req : data["requiredEmployees"]) {
-    (*turnos_requeridos_)[req["day"]][req["shift"]] = req["value"];
+    (*empleados_requeridos_)[req["day"]][req["shift"]] = req["value"];
   }
 }
 
@@ -64,7 +64,7 @@ InstanciaPlanificacion::InstanciaPlanificacion(int dia_inicio, int num_dias, con
     empleados_(padre.empleados_),
     dias_libres_requeridos_(padre.dias_libres_requeridos_),
     satisfaccion_(padre.satisfaccion_),
-    turnos_requeridos_(padre.turnos_requeridos_),
+    empleados_requeridos_(padre.empleados_requeridos_),
     dia_inicio_(dia_inicio), 
     num_dias_(num_dias) {}
 
@@ -83,7 +83,7 @@ int InstanciaPlanificacion::GetSatisfaccion(int empleado, int dia_relativo, int 
  * El costo computacional es O(1) ya que accede directamente a la matriz de turnos requeridos.
  */
 int InstanciaPlanificacion::GetEmpleadosRequeridos(int dia_relativo, int turno) const {
-  return (*turnos_requeridos_)[dia_inicio_ + dia_relativo][turno];
+  return (*empleados_requeridos_)[dia_inicio_ + dia_relativo][turno];
 }
 
 /**

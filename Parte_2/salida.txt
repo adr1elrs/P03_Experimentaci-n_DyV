@@ -1,0 +1,13 @@
+
+--- Planificación de Empleados (Días 0 a 6) ---
+Calidad de la solución: 1976 (Satisfacción: 176, Turnos cubiertos: 18)
+
+Día  | Turno 0   | Turno 1   | Turno 2   |
+-------------------------------------------
+0     | e4, e0    | e3, e1    | e2        |
+1     | e1, e2, e4| e3, e0    | Vacio     |
+2     | e4        | e0        | e2        |
+3     | e3        | e0        | e1        |
+4     | e3        | e2        | e0        |
+5     | e4        | e2        | e0        |
+6     | e3        | e1        | e0        |

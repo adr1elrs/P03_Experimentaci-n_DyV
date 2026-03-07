@@ -18,11 +18,19 @@
  * @param num_empleados Total de empleados en la plantilla.
  * @param num_turnos Total de turnos disponibles por día.
  */
-SolucionPlanificacion::SolucionPlanificacion(int dia_inicio, int num_dias, int num_empleados, int num_turnos) 
+SolucionPlanificacion::SolucionPlanificacion(int dia_inicio, int num_dias, int num_empleados, int num_turnos,int dias_totales,
+      std::shared_ptr<std::vector<int>> dias_libres,
+      std::shared_ptr<std::vector<std::vector<std::vector<int>>>> satisfaccion,
+      std::shared_ptr<std::vector<std::vector<int>>> empleados_requeridos)
     : dia_inicio_(dia_inicio), 
       num_dias_(num_dias),
+      num_turnos_(num_turnos),
       suma_satisfaccion_(0),
-      turnos_cubiertos_(0) {
+      turnos_cubiertos_(0),
+      dias_totales_(dias_totales),
+      dias_libres_(dias_libres),
+      satisfaccion_(satisfaccion),
+      empleados_requeridos_(empleados_requeridos) {
   
   // Reserva de memoria O(D * T) para evitar realojamientos dinámicos
   asignaciones_.resize(num_dias_, std::vector<std::vector<int>>(num_turnos));
@@ -40,6 +48,28 @@ void SolucionPlanificacion::AsignarEmpleado(int dia_relativo, int turno, int emp
   asignaciones_[dia_relativo][turno].push_back(empleado);
   dias_trabajados_[empleado]++;
   suma_satisfaccion_ += satisfaccion;
+}
+
+
+void SolucionPlanificacion::DesasignarEmpleado(int dia_relativo, int turno, int empleado, int satisfaccion, int requeridos) {
+  auto& lista_trabajadores = asignaciones_[dia_relativo][turno];
+
+  auto it = std::find(lista_trabajadores.begin(), lista_trabajadores.end(), empleado);
+
+  if (it != lista_trabajadores.end()) {
+    bool estaba_cubierto = (static_cast<int>(lista_trabajadores.size()) >= requeridos);
+
+    lista_trabajadores.erase(it);
+
+    bool esta_cubierto = (static_cast<int>(lista_trabajadores.size()) >= requeridos);
+
+    if (estaba_cubierto && !esta_cubierto) {
+      --turnos_cubiertos_;
+    }
+
+    suma_satisfaccion_ -= satisfaccion;
+    --dias_trabajados_[empleado];
+  }
 }
 
 /**
@@ -103,38 +133,54 @@ int SolucionPlanificacion::GetCalidad() const {
  * @param os Flujo de salida (ej. std::cout).
  */
 void SolucionPlanificacion::Print(std::ostream& os) const {
-   os << "\n--- Planificación de Empleados (Días " << dia_inicio_ << " a "
-      << (dia_inicio_ + num_dias_ - 1) << ") ---\n";
-   os << "Calidad de la solución: " << GetCalidad() << " (Satisfacción: "
-      << suma_satisfaccion_ << ", Turnos cubiertos: " << turnos_cubiertos_ << ")\n\n";
+  os << "\n--- Planificación de Empleados (Días " << dia_inicio_ << " a "
+     << (dia_inicio_ + num_dias_ - 1) << ") ---\n";
+  os << "Calidad de la solución: " << GetCalidad() << " (Satisfacción: "
+     << suma_satisfaccion_ << ", Turnos cubiertos: " << turnos_cubiertos_ << ")\n\n";
 
-   if (asignaciones_.empty() || asignaciones_[0].empty()) return;
+  if (asignaciones_.empty() || asignaciones_[0].empty()) return;
 
-   int num_turnos = asignaciones_[0].size();
+  // Extraemos las dimensiones
+  int num_turnos = asignaciones_[0].size();
+  
+  // Definimos una caja rígida para todas las columnas
+  const int ANCHO_COLUMNA = 10; 
 
-   os << std::left << std::setw(10) << "Día";
-   for (int t = 0; t < num_turnos; ++t) {
-       os << "| Turno " << std::setw(8) << t << " ";
-   }
-   os << "\n" << std::string(10 + (17 * num_turnos), '-') << "\n";
+  // 1. Imprimir la cabecera
+  os << std::left << std::setw(6) << "Día";
+  for (int t = 0; t < num_turnos; ++t) {
+    std::string header = "Turno " + std::to_string(t);
+    os << "| " << std::left << std::setw(ANCHO_COLUMNA) << header;
+  }
+  os << "|\n"; 
 
-   for (int d = 0; d < num_dias_; ++d) {
-       os << std::left << std::setw(10) << (dia_inicio_ + d);
-       
-       for (int t = 0; t < num_turnos; ++t) {
-           os << "| ";
-           if (asignaciones_[d][t].empty()) {
-               os << std::setw(14) << "Vacío";
-           } else {
-               std::string emps = "";
-               for (size_t i = 0; i < asignaciones_[d][t].size(); ++i) {
-                   emps += std::to_string(asignaciones_[d][t][i]);
-                   if (i < asignaciones_[d][t].size() - 1) emps += ",";
-               }
-               os << std::setw(14) << emps;
-           }
-       }
-       os << "\n";
-   }
-   os << "\n";
+  // 2. Imprimir la línea separadora adaptativa (calcula el ancho total matemáticamente)
+  int ancho_total = 6 + (ANCHO_COLUMNA + 2) * num_turnos + 1;
+  os << std::string(ancho_total, '-') << "\n";
+
+  // 3. Imprimir el contenido de la matriz
+  for (int d = 0; d < num_dias_; ++d) {
+    // Imprimimos el número del día absoluto
+    os << std::left << std::setw(6) << (dia_inicio_ + d);
+    
+    for (int t = 0; t < num_turnos; ++t) {
+      const auto& asignados = asignaciones_[d][t];
+      std::string celda = "";
+      
+      if (asignados.empty()) {
+        // Quitamos la tilde para evitar el desbordamiento de bytes en std::setw()
+        celda = "Vacio"; 
+      } else {
+        // Si hay varios empleados en el mismo turno, los unimos por comas "1, 4"
+        for (size_t i = 0; i < asignados.size(); ++i) {
+          celda += "e" + std::to_string(asignados[i]);
+          if (i < asignados.size() - 1) celda += ", ";
+        }
+      }
+      
+      // Imprimimos la celda ya construida, forzándola a medir exactamente ANCHO_COLUMNA
+      os << "| " << std::left << std::setw(ANCHO_COLUMNA) << celda;
+    }
+    os << "|\n"; // Cerramos la última columna de la fila
+  }
 }

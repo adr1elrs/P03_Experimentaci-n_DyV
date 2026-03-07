@@ -25,21 +25,6 @@
 * de tiempo mediante dia_inicio_ y num_dias_.
 */
 class InstanciaPlanificacion : public Instancia {
- private:
-  // Punteros compartidos hacia los datos globales (Heap).
-  std::shared_ptr<std::vector<std::string>> turnos_;
-  std::shared_ptr<std::vector<std::string>> empleados_;
-  std::shared_ptr<std::vector<int>> dias_libres_requeridos_;
-  
-  // Matriz 3D: [empleado][dia_absoluto][turno]
-  std::shared_ptr<std::vector<std::vector<std::vector<int>>>> satisfaccion_;
-  
-  // Matriz 2D: [dia_absoluto][turno]
-  std::shared_ptr<std::vector<std::vector<int>>> turnos_requeridos_;
-
-  int dia_inicio_; ///< Día absoluto en el que comienza esta subinstancia.
-  int num_dias_;   ///< Cantidad de días que abarca esta subinstancia.
-
  public:
   /**
     * @brief Constructor Raíz. 
@@ -62,12 +47,17 @@ class InstanciaPlanificacion : public Instancia {
     */
   void Print(std::ostream& os) const override;
 
-  // --- Getters de dimensiones ---
+  // Getters
   int GetNumDias() const { return num_dias_; }
   int GetDiaInicio() const { return dia_inicio_; }
   int GetNumEmpleados() const { return empleados_->size(); }
   int GetNumTurnos() const { return turnos_->size(); }
-  const std::vector<int>& GetCapacidadesTurnosDia(int dia_relativo) const { return (*turnos_requeridos_)[dia_inicio_ + dia_relativo]; }
+  const std::vector<int>& GetCapacidadesTurnosDia(int dia_relativo) const { return (*empleados_requeridos_)[dia_inicio_ + dia_relativo]; }
+  
+  int GetDiasTotales() const { return empleados_requeridos_->size(); }
+  std::shared_ptr<std::vector<int>> GetPtrDiasLibres() const { return dias_libres_requeridos_; }
+  std::shared_ptr<std::vector<std::vector<std::vector<int>>>> GetPtrSatisfaccion() const { return satisfaccion_; }
+  std::shared_ptr<std::vector<std::vector<int>>> GetPtrEmpleadosRequeridos() const { return empleados_requeridos_; }
   
 
   int GetSatisfaccion(int empleado, int dia_relativo, int turno) const;
@@ -75,6 +65,21 @@ class InstanciaPlanificacion : public Instancia {
   int GetDiasLibresRequeridos(int empleado) const;
   std::string GetNombreEmpleado(int empleado) const;
   std::string GetNombreTurno(int turno) const;
+
+ private:
+  // Punteros compartidos hacia los datos globales (Heap).
+  std::shared_ptr<std::vector<std::string>> turnos_;
+  std::shared_ptr<std::vector<std::string>> empleados_;
+  std::shared_ptr<std::vector<int>> dias_libres_requeridos_;
+  
+  // Matriz 3D: [empleado][dia_absoluto][turno]
+  std::shared_ptr<std::vector<std::vector<std::vector<int>>>> satisfaccion_;
+  
+  // Matriz 2D: [dia_absoluto][turno]
+  std::shared_ptr<std::vector<std::vector<int>>> empleados_requeridos_;
+
+  int dia_inicio_; ///< Día absoluto en el que comienza esta subinstancia.
+  int num_dias_;   ///< Cantidad de días que abarca esta subinstancia.
 };
 
 #endif 
