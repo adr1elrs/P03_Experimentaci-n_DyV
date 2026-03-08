@@ -22,6 +22,7 @@ bool PlanificacionDyV::Small(std::shared_ptr<Instancia> instancia) {
   return (instancia_dyv->GetNumDias() == 1);
 }
 
+
 std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia> instancia) {
   std::shared_ptr<InstanciaPlanificacion> instancia_dyv = std::dynamic_pointer_cast<InstanciaPlanificacion>(instancia);
   
@@ -72,6 +73,77 @@ std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia
   
   return solucion;
 }
+
+
+/**
+struct EvualuacionTurno {
+  int satisfaccion;
+  int turno;
+  int empleado;
+};
+
+// ./experimento_dyv input/instance_horizon7_employees10_shifts6_001.json
+
+std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia> instancia) {
+  std::shared_ptr<InstanciaPlanificacion> instancia_dyv = std::dynamic_pointer_cast<InstanciaPlanificacion>(instancia);
+  
+  if (!instancia_dyv) return nullptr;
+
+  int num_empleados = instancia_dyv->GetNumEmpleados();
+  int num_turnos = instancia_dyv->GetNumTurnos();
+
+  auto solucion = std::make_shared<SolucionPlanificacion>(instancia_dyv->GetDiaInicio(), 1, num_empleados, num_turnos,
+                                                          instancia_dyv->GetDiasTotales(),
+                                                          instancia_dyv->GetPtrDiasLibres(),
+                                                          instancia_dyv->GetPtrSatisfaccion(),
+                                                          instancia_dyv->GetPtrEmpleadosRequeridos());
+
+  const std::vector<int>& empleados_requeridos = instancia_dyv->GetCapacidadesTurnosDia(0);
+
+  std::vector<bool> empleado_ocupado(num_empleados, false);
+
+  std::vector<EvualuacionTurno> satisfacciones_ordenadas;
+
+  for (int e{0}; e < num_empleados; ++e) {
+    for (int t{0}; t < num_turnos; ++t) {
+      satisfacciones_ordenadas.push_back(EvualuacionTurno{instancia_dyv->GetSatisfaccion(e, 0, t), t, e});
+    }
+  }
+
+  std::sort(satisfacciones_ordenadas.begin(), satisfacciones_ordenadas.end(),
+          [](const EvualuacionTurno& a, const EvualuacionTurno& b) {
+              return a.satisfaccion > b.satisfaccion;
+          });
+  
+  std::vector<int> empleados_pendientes_por_turno = empleados_requeridos;
+
+  int tamano_satisfacciones = satisfacciones_ordenadas.size();
+
+  int suma_total_empleados_requeridos = 0;
+
+  for (int x : empleados_requeridos) {
+    suma_total_empleados_requeridos += x;
+  }
+  
+  int personas_trabajando = 0;
+  for (int s{0}; s < tamano_satisfacciones; ++s) {
+    if (empleado_ocupado[satisfacciones_ordenadas[s].empleado] == false && empleados_pendientes_por_turno[satisfacciones_ordenadas[s].turno] > 0) {
+      solucion->AsignarEmpleado(0, satisfacciones_ordenadas[s].turno, satisfacciones_ordenadas[s].empleado, satisfacciones_ordenadas[s].satisfaccion);
+      empleado_ocupado[satisfacciones_ordenadas[s].empleado] = true;
+      --empleados_pendientes_por_turno[satisfacciones_ordenadas[s].turno];
+      if (empleados_pendientes_por_turno[satisfacciones_ordenadas[s].turno] == 0) {
+        solucion->RegistrarTurnoCubierto();
+      }
+      ++personas_trabajando;
+    }
+    if (personas_trabajando == suma_total_empleados_requeridos) {
+      break;
+    }
+  }
+  return solucion;
+}
+*/
+
 
 std::pair<std::shared_ptr<Instancia>, std::shared_ptr<Instancia>> PlanificacionDyV::Divide(std::shared_ptr<Instancia> instancia) {
   std::shared_ptr<InstanciaPlanificacion> instancia_dyv = std::dynamic_pointer_cast<InstanciaPlanificacion>(instancia);
