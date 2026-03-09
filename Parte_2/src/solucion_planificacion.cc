@@ -121,6 +121,23 @@ int SolucionPlanificacion::GetDiasTrabajados(int empleado) const {
 }
 
 /**
+ * @brief Consulta si el empleado trabaja en un dia dado.
+ * @param dia_relativo Índice del día en la subsolución.
+ * @param empleado Identificador del empleado.
+ * @return Verdadero si trabaja o falso si no.
+ */
+bool SolucionPlanificacion::TrabajaEnDia(int dia_relativo, int empleado) const {
+  for (int t = 0; t < num_turnos_; ++t) {
+    const auto& empleados = asignaciones_[dia_relativo][t];
+
+    if (std::find(empleados.begin(), empleados.end(), empleado) != empleados.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * @brief Devuelve el valor de la función objetivo f(x) instantáneamente.
  * @return Puntuación total (Satisfacción + Turnos cubiertos * 100).
  */
@@ -132,6 +149,7 @@ int SolucionPlanificacion::GetCalidad() const {
  * @brief Imprime la matriz de horarios por consola de forma tabulada.
  * @param os Flujo de salida (ej. std::cout).
  */
+/**
 void SolucionPlanificacion::Print(std::ostream& os) const {
   os << "\n--- Planificación de Empleados (Días " << dia_inicio_ << " a "
      << (dia_inicio_ + num_dias_ - 1) << ") ---\n";
@@ -183,4 +201,95 @@ void SolucionPlanificacion::Print(std::ostream& os) const {
     }
     os << "|\n"; // Cerramos la última columna de la fila
   }
+}
+*/
+
+void SolucionPlanificacion::Print(std::ostream& os) const {
+  if (asignaciones_.empty() || asignaciones_[0].empty()) return;
+
+  int num_empleados = dias_trabajados_.size();
+  const int ANCHO_COLUMNA = 10;
+  const int ANCHO_EMPLEADO = 15;
+
+  // ==========================================
+  // FASE 1: DESGLOSE DÍA A DÍA (Mapa Visual)
+  // ==========================================
+  for (int d = 0; d < num_dias_; ++d) {
+    int dia_absoluto = dia_inicio_ + d;
+    os << "\n=== DÍA " << dia_absoluto << " ===\n";
+
+    // 1. Cabecera de turnos
+    os << std::left << std::setw(ANCHO_EMPLEADO) << ""; // Hueco vacío esquina superior izquierda
+    for (int t = 0; t < num_turnos_; ++t) {
+      os << std::left << std::setw(ANCHO_COLUMNA) << ("Turno " + std::to_string(t));
+    }
+    os << "\n";
+
+    // 2. Imprimir matriz cruzada: Filas (Empleados) x Columnas (Turnos)
+    for (int e = 0; e < num_empleados; ++e) {
+      os << std::left << std::setw(ANCHO_EMPLEADO) << ("Empleado " + std::to_string(e));
+
+      for (int t = 0; t < num_turnos_; ++t) {
+        const auto& asignados = asignaciones_[d][t];
+        
+        // Comprobamos si el empleado 'e' está en el vector de este turno
+        bool trabaja = (std::find(asignados.begin(), asignados.end(), e) != asignados.end());
+
+        // Imprimimos el bloque o el guion. 
+        // Nota: Añadimos espacios manuales porque '█' suele ocupar varios bytes en UTF-8 
+        // y a veces despista al std::setw en algunas terminales.
+        if (trabaja) {
+          os << "█         "; 
+        } else {
+          os << "-         ";
+        }
+      }
+      os << "\n";
+    }
+  }
+
+  // ==========================================
+  // FASE 2: RESUMEN GLOBAL Y AUDITORÍA
+  // ==========================================
+  // --- Cálculos extra para el resumen global ---
+  int total_turnos_ventana = num_dias_ * num_turnos_;
+  int total_asignaciones_objetivo = 0;
+  int asignaciones_actuales = 0;
+
+  for (int d = 0; d < num_dias_; ++d) {
+    int dia_absoluto = dia_inicio_ + d;
+    for (int t = 0; t < num_turnos_; ++t) {
+      total_asignaciones_objetivo += (*empleados_requeridos_)[dia_absoluto][t];
+      asignaciones_actuales += asignaciones_[d][t].size();
+    }
+  }
+  // ---------------------------------------------
+  os << "\n==================================================\n";
+  os << "              RESUMEN GLOBAL                      \n";
+  os << "==================================================\n";
+  os << "Días planificados: " << dia_inicio_ << " a " << (dia_inicio_ + num_dias_ - 1) << "\n";
+  os << "Calidad de la solución: " << GetCalidad() << "\n";
+  os << "  -> Satisfacción acumulada: " << suma_satisfaccion_ << "\n";
+  os << "  -> Turnos cubiertos: " << turnos_cubiertos_ << " de " << total_turnos_ventana 
+     << " (Multiplicador x100)\n";
+  os << "  -> Volumen de plantilla: " << asignaciones_actuales << " asignaciones hechas de " 
+     << total_asignaciones_objetivo << " requeridas en total\n";
+  os << "--------------------------------------------------\n";
+  os << "Auditoría de Descansos (Ventana actual: " << num_dias_ << " días):\n";
+
+  for (int e = 0; e < num_empleados; ++e) {
+    // Calculamos el límite local proporcional idéntico al que usa el Combine
+    double ratio_trabajo = 1.0 - (static_cast<double>((*dias_libres_)[e]) / static_cast<double>(dias_totales_));
+    int limite_local = std::ceil(ratio_trabajo * num_dias_);
+
+    os << "Empleado " << std::left << std::setw(3) << e << ": " 
+       << std::setw(3) << dias_trabajados_[e] << " días trabajados ";
+
+    if (dias_trabajados_[e] <= limite_local) {
+      os << "[OK - Máx permitido: " << limite_local << "]\n";
+    } else {
+      os << "[EXCEDE - Máx permitido: " << limite_local << "]\n";
+    }
+  }
+  os << "==================================================\n\n";
 }

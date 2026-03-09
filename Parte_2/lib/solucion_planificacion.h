@@ -54,6 +54,9 @@ class SolucionPlanificacion : public Solucion {
   
   // Cuántos días el empleado ha trabajado
   int GetDiasTrabajados(int empleado) const;
+
+  // Devuelve true si el empleado trabaja en ese día (en cualquier turno)
+  bool TrabajaEnDia(int dia_relativo, int empleado) const;
   // Calcula la función objetivo
   int GetCalidad() const;
   

@@ -22,7 +22,7 @@ bool PlanificacionDyV::Small(std::shared_ptr<Instancia> instancia) {
   return (instancia_dyv->GetNumDias() == 1);
 }
 
-
+/**
 std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia> instancia) {
   std::shared_ptr<InstanciaPlanificacion> instancia_dyv = std::dynamic_pointer_cast<InstanciaPlanificacion>(instancia);
   
@@ -73,9 +73,9 @@ std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia
   
   return solucion;
 }
+*/
 
 
-/**
 struct EvualuacionTurno {
   int satisfaccion;
   int turno;
@@ -142,7 +142,7 @@ std::shared_ptr<Solucion> PlanificacionDyV::SolveSmall(std::shared_ptr<Instancia
   }
   return solucion;
 }
-*/
+
 
 
 std::pair<std::shared_ptr<Instancia>, std::shared_ptr<Instancia>> PlanificacionDyV::Divide(std::shared_ptr<Instancia> instancia) {
@@ -154,6 +154,7 @@ std::pair<std::shared_ptr<Instancia>, std::shared_ptr<Instancia>> PlanificacionD
   return {primera_mitad_instancia, segunda_mitad_instancia};
 }
 
+/**
 std::shared_ptr<Solucion> PlanificacionDyV::Combine(std::shared_ptr<Solucion> solucion_1, std::shared_ptr<Solucion> solucion_2) {
   // Preparamos ambas soluciones que tendremos que concatenar
   auto solucion_izquierda = std::dynamic_pointer_cast<SolucionPlanificacion>(solucion_1);
@@ -206,6 +207,73 @@ std::shared_ptr<Solucion> PlanificacionDyV::Combine(std::shared_ptr<Solucion> so
         break;
       }
 
+    }
+  }
+  return sol_combinada;
+}
+*/
+
+std::shared_ptr<Solucion> PlanificacionDyV::Combine(std::shared_ptr<Solucion> solucion_1, std::shared_ptr<Solucion> solucion_2) {
+  // Preparamos ambas soluciones que tendremos que concatenar
+  auto solucion_izquierda = std::dynamic_pointer_cast<SolucionPlanificacion>(solucion_1);
+  auto solucion_derecha = std::dynamic_pointer_cast<SolucionPlanificacion>(solucion_2);
+  if (!solucion_izquierda || !solucion_derecha) return nullptr;
+  
+  // Creamos la solucion a partir de la izquierda para posteriormente concatenar la derecha
+  auto sol_combinada = std::make_shared<SolucionPlanificacion>(*solucion_izquierda);
+  sol_combinada->Concatenar(*solucion_derecha);
+
+  int num_empleados = sol_combinada->GetNumEmpleados();
+  int dias_totales = sol_combinada->GetDiasTotales();
+  for (int e{0}; e < num_empleados; ++e) {
+    double ratio_trabajo_empleado =  1 - (static_cast<double>(sol_combinada->GetDiasLibresExigidos(e)) / static_cast<double>(dias_totales));
+    double maximo_dias_trabajados_en_llamada_actual = std::ceil(ratio_trabajo_empleado * sol_combinada->GetNumDias());
+    while (sol_combinada->GetDiasTrabajados(e) > maximo_dias_trabajados_en_llamada_actual) {
+      int peor_dia_relativo = -1;
+      int peor_turno = -1;
+      int peor_sat = 999999;
+      
+      // Iteramos sobre todos los días y turnos
+      for (int d{0}; d < sol_combinada->GetNumDias(); ++d) {
+        for (int t{0}; t < sol_combinada->GetNumTurnos(); ++t) {
+          const auto& empleados_asignados = sol_combinada->GetAsignaciones(d, t);
+
+          if (std::find(empleados_asignados.begin(), empleados_asignados.end(), e) != empleados_asignados.end()) {
+            int dia_absoluto = sol_combinada->GetDiaInicio() + d;
+
+            int sat = sol_combinada->GetSatisfaccion(e, dia_absoluto, t);
+
+            if (sat < peor_sat) {
+              peor_dia_relativo = d;
+              peor_turno = t;
+              peor_sat = sat;
+            }
+          }
+        }
+      }
+      if (peor_dia_relativo != -1) {
+        // Busqueda de sustituto
+        std::vector<std::pair<int,int>> posibles_empleados_sustitutos;
+        for (int e_s{0}; e_s < num_empleados; ++e_s) {
+          int dias_trabajados_e_s = sol_combinada->GetDiasTrabajados(e_s);
+          double ratio_trabajo_empleado_s =  1 - (static_cast<double>(sol_combinada->GetDiasLibresExigidos(e_s)) / static_cast<double>(dias_totales));
+          double maximo_dias_trabajados_llamada_actual_e_s = std::ceil(ratio_trabajo_empleado_s * sol_combinada->GetNumDias()); 
+          if (!sol_combinada->TrabajaEnDia(peor_dia_relativo, e_s) && ((dias_trabajados_e_s + 1) <= maximo_dias_trabajados_llamada_actual_e_s)) {
+            int satisfaccion_en_dia = sol_combinada->GetSatisfaccion(e_s, sol_combinada->GetDiaInicio() + peor_dia_relativo, peor_turno);
+            posibles_empleados_sustitutos.push_back({e_s, satisfaccion_en_dia});
+          }
+        }
+        std::sort(posibles_empleados_sustitutos.begin(), posibles_empleados_sustitutos.end(),
+          [](const std::pair<int,int>& a, const std::pair<int,int>& b) {
+              return a.second > b.second;
+          });
+        if (posibles_empleados_sustitutos.size() > 0) {
+          sol_combinada->AsignarEmpleado(peor_dia_relativo, peor_turno, posibles_empleados_sustitutos[0].first, posibles_empleados_sustitutos[0].second);
+        }
+        int dia_absoluto = sol_combinada->GetDiaInicio() + peor_dia_relativo;
+        int requeridos = sol_combinada->GetRequeridos(dia_absoluto, peor_turno);
+        sol_combinada->DesasignarEmpleado(peor_dia_relativo, peor_turno, e, peor_sat, requeridos);
+      } 
     }
   }
   return sol_combinada;
