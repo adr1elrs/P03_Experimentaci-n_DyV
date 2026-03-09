@@ -201,6 +201,51 @@ void SolucionPlanificacion::Print(std::ostream& os) const {
     }
     os << "|\n"; // Cerramos la última columna de la fila
   }
+
+  // ==========================================
+  // FASE 2: RESUMEN GLOBAL Y AUDITORÍA
+  // ==========================================
+  // --- Cálculos extra para el resumen global ---
+  int total_turnos_ventana = num_dias_ * num_turnos_;
+  int total_asignaciones_objetivo = 0;
+  int asignaciones_actuales = 0;
+
+  for (int d = 0; d < num_dias_; ++d) {
+    int dia_absoluto = dia_inicio_ + d;
+    for (int t = 0; t < num_turnos_; ++t) {
+      total_asignaciones_objetivo += (*empleados_requeridos_)[dia_absoluto][t];
+      asignaciones_actuales += asignaciones_[d][t].size();
+    }
+  }
+  // ---------------------------------------------
+  os << "\n==================================================\n";
+  os << "              RESUMEN GLOBAL                      \n";
+  os << "==================================================\n";
+  os << "Días planificados: " << dia_inicio_ << " a " << (dia_inicio_ + num_dias_ - 1) << "\n";
+  os << "Calidad de la solución: " << GetCalidad() << "\n";
+  os << "  -> Satisfacción acumulada: " << suma_satisfaccion_ << "\n";
+  os << "  -> Turnos cubiertos: " << turnos_cubiertos_ << " de " << total_turnos_ventana 
+     << " (Multiplicador x100)\n";
+  os << "  -> Volumen de plantilla: " << asignaciones_actuales << " asignaciones hechas de " 
+     << total_asignaciones_objetivo << " requeridas en total\n";
+  os << "--------------------------------------------------\n";
+  os << "Auditoría de Descansos (Ventana actual: " << num_dias_ << " días):\n";
+
+  for (int e = 0; e < num_empleados; ++e) {
+    // Calculamos el límite local proporcional idéntico al que usa el Combine
+    double ratio_trabajo = 1.0 - (static_cast<double>((*dias_libres_)[e]) / static_cast<double>(dias_totales_));
+    int limite_local = std::ceil(ratio_trabajo * num_dias_);
+
+    os << "Empleado " << std::left << std::setw(3) << e << ": " 
+       << std::setw(3) << dias_trabajados_[e] << " días trabajados ";
+
+    if (dias_trabajados_[e] <= limite_local) {
+      os << "[OK - Máx permitido: " << limite_local << "]\n";
+    } else {
+      os << "[EXCEDE - Máx permitido: " << limite_local << "]\n";
+    }
+  }
+  os << "==================================================\n\n";
 }
 */
 
